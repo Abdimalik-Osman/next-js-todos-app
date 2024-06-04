@@ -171,7 +171,18 @@
     position: fixed;
     width: 100%;
   }
-
+  .container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  
+  .completed {
+    color: red;
+    text-decoration:dashed;
+  }
+  
   .description p {
     align-items: center;
     inset: 0 0 auto;

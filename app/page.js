@@ -1,95 +1,131 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Container, Row, Col, ListGroup, ListGroupItem, Button, Input, Form, FormGroup, Label } from 'reactstrap';
+import styles from './page.module.css'; // Import the CSS module
 
 export default function Home() {
+  const [todos, setTodos] = useState([]);
+  const [newTodo, setNewTodo] = useState('');
+  const [editing, setEditing] = useState(null);
+  const [editingText, setEditingText] = useState('');
+
+  console.log(todos)
+  useEffect(() => {
+    fetchTodos();
+  }, []);
+
+  const fetchTodos = async () => {
+    const res = await fetch('/api/todos');
+    const todos = await res.json();
+    setTodos(todos);
+  };
+
+  const addTodo = async (e) => {
+    e.preventDefault();
+    const res = await fetch('/api/todos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title: newTodo, completed: false }),
+    });
+    const todo = await res.json();
+    setTodos([...todos, todo]);
+    setNewTodo('');
+  };
+
+  const updateTodo = async (updatedTodo) => {
+    await fetch('/api/todos', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedTodo),
+    });
+    setTodos(todos.map(todo => (todo.id === updatedTodo.id ? updatedTodo : todo)));
+    setEditing(null);
+  };
+
+  const toggleComplete = async (id) => {
+    const updatedTodo = todos.find(todo => todo.id === id);
+    updatedTodo.completed = !updatedTodo.completed;
+    await updateTodo(updatedTodo);
+  };
+  const deleteTodo = async (id) => {
+    await fetch('/api/todos', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id }),
+    });
+    setTodos(todos.filter(todo => todo.id !== id));
+  };
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    <Container className={styles.container}>
+      <Row className="my-4 justify-content-center">
+        <Col md="8">
+          <h1 className="text-center">Todo List</h1>
+          <Form onSubmit={addTodo}>
+            <FormGroup>
+              <Label for="newTodo">New Todo</Label>
+              <Input
+                type="text"
+                name="newTodo"
+                id="newTodo"
+                value={newTodo}
+                onChange={(e) => setNewTodo(e.target.value)}
+                placeholder="Enter a new task"
+                required
+              />
+            </FormGroup>
+            <Button color="primary" type="submit" className="w-100">Add Todo</Button>
+          </Form>
+          <ListGroup className="mt-4">
+            {todos.map(todo => (
+              <ListGroupItem key={todo.id} className="d-flex justify-content-between align-items-center">
+                {editing === todo.id ? (
+                  <>
+                    <Input
+                      style={{width:"70%"}}
+                      type="text"
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                    />
+                    <div>
+                      <Button color="success" className="mx-3" onClick={() => updateTodo({ ...todo, title: editingText })}>
+                        Save
+                      </Button>
+                      <Button color="secondary" onClick={() => setEditing(null)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p style={{textDecoration:todo.completed ? 'line-through':""}}>
+                      {todo.title}
+                    </p>
+                    <div>
+                      <Button color="success" className="me-2" onClick={() => toggleComplete(todo.id)}>
+                        {todo.completed ? 'Undo' : 'Complete'}
+                      </Button>
+                      <Button color="info" className="me-2" onClick={() => { setEditing(todo.id); setEditingText(todo.title); }}>
+                        Edit
+                      </Button>
+                      <Button color="danger" onClick={() => deleteTodo(todo.id)}>
+                        Delete
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </ListGroupItem>
+            ))}
+          </ListGroup>
+        </Col>
+      </Row>
+    </Container>
   );
 }
